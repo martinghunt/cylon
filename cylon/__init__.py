@@ -10,6 +10,7 @@ __all__ = [
     "amplicon_overlapper",
     "amplicons",
     "assemble",
+    "consensus_callers",
     "racon",
     "tasks",
     "utils",

@@ -36,7 +36,7 @@ def syscall(command, allow_fail=False, cwd=None):
 
 
 def look_for_required_binaries_in_path():
-    expected_binaries = ["racon", "minimap2"]
+    expected_binaries = ["racon", "minia", "minimap2"]
     results = {}
     all_ok = True
     for binary in expected_binaries:

@@ -9,6 +9,7 @@ TECH_DEPENDENT_DEFAULTS = {
     "minimap_opts": {"illumina": "-t 1 -x sr", "ont": "-t 1 -x map-ont"},
     "target_coverage": {"illumina": 150, "ont": 250},
     "min_read_length": {"illumina": 50, "ont": 200},
+    "polish_method": {"illumina": "minia", "ont": "racon"},
 }
 
 
@@ -111,6 +112,12 @@ def main(args=None):
         default=0,
         type=int,
         metavar="INT",
+    )
+    subparser_assemble.add_argument(
+        "--polish_method",
+        choices=sorted(list(TECH_DEPENDENT_DEFAULTS["polish_method"].keys())),
+        metavar="STR",
+        help=f"Method to use for polishing/assembling each amplicon [{tech_dependent_usage_default_string('polish_method')}]",
     )
     subparser_assemble.add_argument(
         "--read_map_tolerance",

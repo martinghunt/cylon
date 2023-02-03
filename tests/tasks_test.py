@@ -19,6 +19,7 @@ def test_assemble():
         data_dir, "run_assembly_pipeline.amplicons.json"
     )
     options.outdir = outdir
+    options.polish_method = "racon"
     options.reads_to_map = os.path.join(data_dir, "run_assembly_pipeline.reads.fa")
     options.reads_per_amp_dir = None
     options.mates_to_map = None

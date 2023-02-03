@@ -5,7 +5,7 @@ from operator import attrgetter
 import os
 import random
 
-from cylon import racon, utils
+from cylon import consensus_callers, utils
 
 
 class Amplicon:
@@ -201,6 +201,7 @@ class Amplicon:
         self,
         ref_genome,
         outdir,
+        polish_method,
         bam_to_slice_reads=None,
         reads_file=None,
         min_mean_coverage=25,
@@ -246,18 +247,18 @@ class Amplicon:
                 return
         else:
             logging.debug(
-                "Using user-supplied reads {reads_file} for amplicon {self.name}"
+                f"Using user-supplied reads {reads_file} for amplicon {self.name}"
             )
             self.polish_data["Comments"].append(
                 f"Read stats not calculated because user supplied file {reads_file}"
             )
 
         amplicon_seq = ref_genome[self.start : self.end + 1]
-        racon_dir = os.path.join(outdir, "Racon")
-        self.polished_seq = racon.run_racon_iterations(
+        self.polished_seq = consensus_callers.make_consensus(
+            polish_method,
             amplicon_seq,
             reads_file,
-            racon_dir,
+            os.path.join(outdir, "Polish"),
             debug=debug,
             max_iterations=racon_iterations,
             minimap_opts=minimap_opts,

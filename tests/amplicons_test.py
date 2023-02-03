@@ -131,75 +131,86 @@ def test_get_reads_for_polishing():
 def test_polish():
     ref_fasta = os.path.join(data_dir, "polish.ref.fa")
     ref_genome = utils.load_single_seq_fasta(ref_fasta)
-    amplicon = amplicons.Amplicon("amplicon1", 60, 259, 1, 1)
     reads_bam = os.path.join(data_dir, "polish.bam")
     bam = pysam.AlignmentFile(reads_bam, "rb")
     outdir = "tmp.polish.out"
     utils.rm_rf(outdir)
-    amplicon.polish(
-        ref_genome,
-        outdir,
-        bam_to_slice_reads=bam,
-        min_mean_coverage=3,
-        racon_iterations=3,
-        min_depth_for_not_N=3,
-        min_read_length=100,
-        max_polished_N_prop=0.5,
-        debug=True,
-    )
-    assert (
-        amplicon.masked_seq
-        == "NNNNNNNNNNNNNNNNNNNNAAAGCCCCATTTTGTACAGCTTTTTCTAGAACAGTCAGGGCGCGCTCCCAGGAGTTGCTTCGCTTCCAGCTAGAAATGATCATCGAACCTGGGTAAGGGCATAATACGAGAATGCTGCCCTATTGCCAGTGCTTAGAAATGGACTGGTGTTACGTCCACGNNNNNNNNNNNNNNNNNNNNN"
-    )
-    assert amplicon.assemble_success
-    assert amplicon.polish_data["Polish success"]
-    utils.rm_rf(outdir)
+
+    expect = {
+        "racon": "NNNNNNNNNNNNNNNNNNNNAAAGCCCCATTTTGTACAGCTTTTTCTAGAACAGTCAGGGCGCGCTCCCAGGAGTTGCTTCGCTTCCAGCTAGAAATGATCATCGAACCTGGGTAAGGGCATAATACGAGAATGCTGCCCTATTGCCAGTGCTTAGAAATGGACTGGTGTTACGTCCACGNNNNNNNNNNNNNNNNNNNNN"
+    }
+    expect["minia"] = expect["racon"].strip("N")
+    for tool in expect:
+        amplicon = amplicons.Amplicon("amplicon1", 60, 259, 1, 1)
+        amplicon.polish(
+            ref_genome,
+            outdir,
+            tool,
+            bam_to_slice_reads=bam,
+            min_mean_coverage=3,
+            racon_iterations=3,
+            min_depth_for_not_N=3,
+            min_read_length=100,
+            max_polished_N_prop=0.5,
+            debug=True,
+        )
+        assert amplicon.masked_seq == expect[tool]
+        assert amplicon.assemble_success
+        assert amplicon.polish_data["Polish success"]
+        utils.rm_rf(outdir)
 
     # Same again, but this time use the fasta of reads instead of the BAM file.
     # Plus, this is giving untrimmed reads, so we get less masking. In the
     # previous run 20bp trimmed off all the reads
     reads_file = os.path.join(data_dir, "polish.reads.fa")
-    amplicon.polish(
-        ref_genome,
-        outdir,
-        reads_file=reads_file,
-        min_mean_coverage=3,
-        racon_iterations=3,
-        min_depth_for_not_N=3,
-        min_read_length=100,
-        max_polished_N_prop=0.5,
-        debug=True,
-    )
-    assert (
-        amplicon.masked_seq
-        == "CGTTAATCCTAGGGCAGTTAAAAGCCCCATTTTGTACAGCTTTTTCTAGAACAGTCAGGGCGCGCTCCCAGGAGTTGCTTCGCTTCCAGCTAGAAATGATCATCGAACCTGGGTAAGGGCATAATACGAGAATGCTGCCCTATTGCCAGTGCTTAGAAATGGACTGGTGTTACGTCCACGAAATCTGCAACAAGCCCGGT"
-    )
-    assert amplicon.assemble_success
-    assert amplicon.polish_data["Polish success"]
-    utils.rm_rf(outdir)
+    expect = {
+        "minia": "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNCGTTAATCCTAGGGCAGTTAAAAGCCCCATTTTGTACAGCTTTTTCTAGAACAGTCAGGGCGCGCTCCCAGGAGTTGCTTCGCTTCCAGCTAGAAATGATCATCGAACCTGGGTAAGGGCATAATACGAGAATGCTGCCCTATTGCCAGTGCTTAGAAATGGACTGGTGTTACGTCCACGAAATCTGCAACAAGCCCGGT"
+    }
+    expect["racon"] = expect["minia"].strip("N")
+    for tool in expect:
+        amplicon = amplicons.Amplicon("amplicon1", 60, 259, 1, 1)
+        amplicon.polish(
+            ref_genome,
+            outdir,
+            tool,
+            reads_file=reads_file,
+            min_mean_coverage=3,
+            racon_iterations=3,
+            min_depth_for_not_N=3,
+            min_read_length=100,
+            max_polished_N_prop=0.5,
+            debug=True,
+        )
+        assert amplicon.masked_seq == expect[tool]
+        assert amplicon.assemble_success
+        assert amplicon.polish_data["Polish success"]
+        utils.rm_rf(outdir)
 
     # The reads are such that there's a dip in coverage in the middle of the
     # amplicon. Setting min_depth_for_not_N higher makes this region get
     # masked, and then the amplicon should get failed
-    amplicon = amplicons.Amplicon("amplicon1", 60, 259, 1, 1)
-    amplicon.polish(
-        ref_genome,
-        outdir,
-        bam_to_slice_reads=bam,
-        min_mean_coverage=3,
-        racon_iterations=3,
-        min_depth_for_not_N=18,
-        min_read_length=50,
-        max_polished_N_prop=0.1,
-        debug=True,
-    )
-    assert (
-        amplicon.masked_seq
-        == "NNNNNNNNNNNNNNNNNNNNAAAGCCCCATTTTGTACAGCTTTTTCTAGAACAGTCAGGGCGCGCTCCCAGGAGTTGCTTCGCTNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNGAATGCTGCCCTATTGCCAGTGCTTAGAAATGGACTGGTGTTACGTCCACGNNNNNNNNNNNNNNNNNNNNN"
-    )
-    assert not amplicon.assemble_success
-    assert not amplicon.polish_data["Polish success"]
-    utils.rm_rf(outdir)
+    expect = {
+        "racon": "NNNNNNNNNNNNNNNNNNNNAAAGCCCCATTTTGTACAGCTTTTTCTAGAACAGTCAGGGCGCGCTCCCAGGAGTTGCTTCGCTNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNGAATGCTGCCCTATTGCCAGTGCTTAGAAATGGACTGGTGTTACGTCCACGNNNNNNNNNNNNNNNNNNNNN",
+    }
+    expect["minia"] = expect["racon"].strip("N")
+    for tool in expect:
+        amplicon = amplicons.Amplicon("amplicon1", 60, 259, 1, 1)
+        amplicon.polish(
+            ref_genome,
+            outdir,
+            tool,
+            bam_to_slice_reads=bam,
+            min_mean_coverage=3,
+            racon_iterations=3,
+            min_depth_for_not_N=18,
+            min_read_length=50,
+            max_polished_N_prop=0.1,
+            debug=True,
+        )
+        assert amplicon.masked_seq == expect[tool]
+        assert not amplicon.assemble_success
+        assert not amplicon.polish_data["Polish success"]
+        utils.rm_rf(outdir)
 
 
 def test_final_overlap():

@@ -58,6 +58,7 @@ ldconfig
 cd ..
 
 #________________________ racon _____________________________#
+cd $install_root
 git clone --recursive https://github.com/lbcb-sci/racon.git racon-git
 cd racon-git
 mkdir build
@@ -67,3 +68,9 @@ make
 cd ../../
 cp -s racon-git/build/bin/racon .
 
+#________________________ minia _____________________________#
+cd $install_root
+git clone --recursive https://github.com/GATB/minia.git minia-git
+cd minia-git
+sh INSTALL
+cp -s minia-git/build/bin/minia .

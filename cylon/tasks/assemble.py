@@ -39,6 +39,7 @@ def run(options):
         options.ref_fasta,
         options.amplicons_json,
         options.outdir,
+        options.polish_method,
         sorted_bam=options.bam,
         reads_per_amp_dir=options.reads_per_amp_dir,
         reads_fastaq=options.reads_to_map,
