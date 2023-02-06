@@ -43,16 +43,17 @@ def get_best_contig(ref_seq, contigs_fa, outprefix):
     return contig.seq
 
 
-def run_minia(
+def run_minia_one_kmer(
     seq_to_polish,
     reads_filename,
     outdir,
+    kmer,
     debug=False,
     minia_opts="-keep-isolated -tip-len-topo-kmult 1.5",
 ):
     os.mkdir(outdir)
     verbose = "1" if debug else "0"
-    command = f"minia {minia_opts} -verbose {verbose} -in {reads_filename} -out out"
+    command = f"minia {minia_opts} -kmer-size {kmer} -verbose {verbose} -in {reads_filename} -out out"
     completed_process = utils.syscall(command, allow_fail=True, cwd=outdir)
     if completed_process.returncode != 0:
         return None
@@ -63,6 +64,40 @@ def run_minia(
 
     mummer_outprefix = os.path.join(outdir, "mummer")
     return get_best_contig(seq_to_polish, contigs_fa, mummer_outprefix)
+
+
+def run_minia(
+    seq_to_polish,
+    reads_filename,
+    outdir,
+    kmers=[31, 13, 59],
+    debug=False,
+    minia_opts="-keep-isolated -tip-len-topo-kmult 1.5",
+    min_length_prop=0.8,
+):
+    minia_seqs = []
+    os.mkdir(outdir)
+    for kmer in kmers:
+        got = run_minia_one_kmer(
+            seq_to_polish,
+            reads_filename,
+            os.path.join(outdir, str(kmer)),
+            kmer,
+            debug=debug,
+            minia_opts=minia_opts,
+        )
+        if got is None:
+            continue
+        elif len(got) / len(seq_to_polish) >= min_length_prop:
+            return got
+        else:
+            minia_seqs.append(got)
+
+    if len(minia_seqs) > 0:
+        minia_seqs.sort(key=len)
+        return minia_seqs[-1]
+    else:
+        return None
 
 
 def make_consensus(

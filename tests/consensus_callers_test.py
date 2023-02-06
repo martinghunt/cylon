@@ -23,6 +23,7 @@ def test_make_consensus():
     )
     utils.rm_rf(outdir)
 
+    outdir = "tmp.run_racon"
     got_polished = consensus_callers.make_consensus(
         "racon", seq_to_polish, reads, outdir, debug=True
     )
@@ -37,13 +38,15 @@ def _test_make_consensus_bad_data():
     fa_to_polish = os.path.join(data_dir, "run_racon.to_polish.fa")
     seq_to_polish = utils.load_single_seq_fasta(fa_to_polish)
     reads = os.path.join(data_dir, "run_racon_bad_reads.fa")
-    outdir = "tmp.run_racon_iterations"
+    outdir = "tmp.minia_bad_data"
     utils.rm_rf(outdir)
     got_polished = consensus_callers.make_consensus(
         "minia", seq_to_polish, reads, outdir, max_iterations=3, debug=True
     )
     assert got_polished is None
     utils.rm_rf(outdir)
+
+    outdir = "tmp.racon_bad_data"
     got_polished = consensus_callers.make_consensus(
         "racon", seq_to_polish, reads, outdir, max_iterations=3, debug=True
     )
