@@ -26,7 +26,7 @@ def get_best_contig(ref_seq, contigs_fa, outprefix):
     runner.run()
     best_hit = None
     for hit in pymummer.coords_file.reader(mummer_out):
-        if best_hit is None or hit.hit_length_qry > best_hit.hit_length_qry:
+        if best_hit is None or hit.qry_length > best_hit.qry_length:
             best_hit = hit
 
     if best_hit is None:
@@ -100,6 +100,88 @@ def run_minia(
         return None
 
 
+
+def run_velvet(
+    seq_to_polish,
+    reads_filename,
+    outdir,
+    kmers=[11,21,31,51],
+    debug=False,
+    velvetg_opts="-cov_cutoff 20 -exp_cov auto",
+    min_length_prop=0.8,
+):
+    velvet_seqs = []
+    os.mkdir(outdir)
+    for kmer in kmers:
+        out = os.path.join(outdir, str(kmer))
+        p = utils.syscall(f"velveth {out} {kmer} -short -fasta {reads_filename}", allow_fail=True)
+        if p.returncode != 0:
+            continue
+        p = utils.syscall(f"velvetg {out} {velvetg_opts}", allow_fail=True)
+        if p.returncode != 0:
+            continue
+        contigs_fa = os.path.join(f"{out}", "contigs.fa")
+        if not os.path.exists(contigs_fa):
+            return None
+        got = get_best_contig(seq_to_polish, contigs_fa, f"{out}.mummer")
+        if got is None:
+            continue
+        elif len(got) / len(seq_to_polish) >= min_length_prop:
+            return got
+        else:
+            velvet_seqs.append(got)
+
+    if len(velvet_seqs) > 0:
+        velvet_seqs.sort(key=len)
+        return velvet_seqs[-1]
+    else:
+        return None
+
+
+def run_fml(
+    seq_to_polish,
+    reads_filename,
+    outdir,
+    debug=False,
+    fml_opts="-t 1 -e 41 -A",
+    min_length_prop=0.8,
+):
+    # Note on fermilite options: the default error correction kmer length set
+    # set with -e introduces indels into the consensus. The default is "auto",
+    # not sure what that is but fermikit paper suggests 23. Setting it higher
+    # removes these indels.
+    # Also, the -c option has a big effect depending on if the reads are all
+    # stacked up in the same place or not. Default is ok, except if reads
+    # are basically all the same (like in the tests), where -c1,1 works
+    c_opts = ["default", "1"]
+    fml_seqs = []
+    os.mkdir(outdir)
+    for c_opt in c_opts:
+        out = os.path.join(outdir, c_opt)
+        contigs_fq = f"{out}.fq"
+        c = "" if c_opt =="default" else f"-c{c_opt},{c_opt}"
+        p = utils.syscall(f"fml-asm {c} {fml_opts} {reads_filename} > {contigs_fq}", allow_fail=True)
+        if p.returncode != 0:
+            continue
+        if not os.path.exists(contigs_fq):
+            continue
+        contigs_fa = f"{out}.fa"
+        pyfastaq.tasks.to_fasta(contigs_fq, contigs_fa)
+        got = get_best_contig(seq_to_polish, contigs_fa, os.path.join(outdir, "mummer"))
+        if got is None:
+            continue
+        elif len(got) / len(seq_to_polish) >= min_length_prop:
+            return got
+        else:
+            fml_seqs.append(got)
+
+    if len(fml_seqs) > 0:
+        fml_seqs.sort(key=len)
+        return fml_seqs[-1]
+    else:
+        return None
+
+
 def make_consensus(
     method,
     seq_to_polish,
@@ -112,8 +194,12 @@ def make_consensus(
     opts = {"debug": debug}
     reads_filename = os.path.abspath(reads_filename)
 
-    if method == "minia":
+    if method == "fermilite":
+        f = run_fml
+    elif method == "minia":
         f = run_minia
+    elif method == "velvet":
+        f = run_velvet
     elif method == "racon":
         f = racon.run_racon_iterations
         opts.update(

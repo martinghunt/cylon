@@ -23,7 +23,19 @@ def test_make_consensus():
     )
     utils.rm_rf(outdir)
 
+    outdir = "tmp.run_fermilite"
+    utils.rm_rf(outdir)
+    got_polished = consensus_callers.make_consensus(
+        "fermilite", seq_to_polish, reads, outdir, debug=True
+    )
+    assert (
+        got_polished
+        == "CGTTAATCCTAGGGCAGTTAAAAGCCCCATTTTGTACAGCTTTTTCTAGAACAGTCAGGGCGCGCTCCCAGGAGTTGCTTCGCTTCCAGCTAGAAATGATCATCGAACCTGGGTAAGGGCTTAATACGAGAATGCTGCCCTATTGCCAGTGCTTAGAAATGGACTGGTGTTACGTCCACGAAATCTGCAACAAGCCCGGT"
+    )
+    utils.rm_rf(outdir)
+
     outdir = "tmp.run_racon"
+    utils.rm_rf(outdir)
     got_polished = consensus_callers.make_consensus(
         "racon", seq_to_polish, reads, outdir, debug=True
     )

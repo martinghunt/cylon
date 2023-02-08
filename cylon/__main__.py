@@ -9,7 +9,7 @@ TECH_DEPENDENT_DEFAULTS = {
     "minimap_opts": {"illumina": "-t 1 -x sr", "ont": "-t 1 -x map-ont"},
     "target_coverage": {"illumina": 150, "ont": 250},
     "min_read_length": {"illumina": 50, "ont": 200},
-    "polish_method": {"illumina": "minia", "ont": "racon"},
+    "polish_method": {"illumina": "fermilite", "ont": "racon"},
 }
 
 
