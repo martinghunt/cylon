@@ -1,3 +1,4 @@
+from collections import Counter
 import logging
 import os
 import pysam
@@ -36,7 +37,7 @@ def syscall(command, allow_fail=False, cwd=None):
 
 
 def look_for_required_binaries_in_path():
-    expected_binaries = ["racon", "minia", "minimap2"]
+    expected_binaries = ["fml-asm", "racon", "minimap2"]
     results = {}
     all_ok = True
     for binary in expected_binaries:
@@ -74,19 +75,32 @@ def mask_low_coverage(ref_seq, reads_file, outprefix, min_depth=5, debug=False):
     bam = f"{outprefix}.bam"
     syscall(f"minimap2 -x map-ont -t 1 -a {ref_fasta} {reads_file} > {unsorted_sam}")
     pysam.sort("--output-fmt", "BAM", "-o", bam, unsorted_sam)
-    depth_lines = pysam.depth("-aa", bam).rstrip().split("\n")
-    new_seq = list(ref_seq)
+    pysam.index(bam)
 
-    for i, line in enumerate(depth_lines):
-        ref, pos, depth = line.rstrip().split()
-        assert int(pos) == i + 1
-        depth = int(depth)
-        if depth < min_depth:
-            new_seq[i] = "N"
+    aln_file = pysam.AlignmentFile(bam, "rb")
+    new_seq = ["N"] * len(ref_seq)
+    acgt = {"A", "C", "G", "T"}
+    for p in aln_file.pileup(fastaFile=ref_fasta, stepper="samtools", compute_baq=False, ignore_overlaps=False):
+        counts = Counter(map(str.upper, p.get_query_sequences()))
+        total = 0
+        max_count = 0
+        best = None
+        for k, v in counts.items():
+            total += v
+            if v > max_count:
+                max_count = v
+                best = k
+
+        if total < min_depth:
+            continue
+
+        if best is not None and best in acgt:
+            new_seq[p.pos] = best
 
     if not debug:
         os.unlink(unsorted_sam)
         os.unlink(bam)
+        os.unlink(f"{bam}.bai")
         os.unlink(ref_fasta)
 
     return "".join(new_seq)
