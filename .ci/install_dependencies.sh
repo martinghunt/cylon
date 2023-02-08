@@ -29,6 +29,17 @@ if [ ! -d $install_root ]; then
 fi
 cd $install_root
 
+
+#________________________ minia _____________________________#
+cd $install_root
+git clone --recursive https://github.com/GATB/minia.git minia-git
+cd minia-git
+# Default is 8 cores. Crashes my build machine, so change to 2 cores
+sed -i 's/make -j8/make -j2/' INSTALL
+sh INSTALL
+cd $install_root
+cp -s minia-git/build/bin/minia .
+
 #________________________ minimap2 __________________________#
 cd $install_root
 MINIMAP2_V=2.24
@@ -67,10 +78,3 @@ cmake -DCMAKE_BUILD_TYPE=Release ..
 make
 cd ../../
 cp -s racon-git/build/bin/racon .
-
-#________________________ minia _____________________________#
-cd $install_root
-git clone --recursive https://github.com/GATB/minia.git minia-git
-cd minia-git
-sh INSTALL
-cp -s minia-git/build/bin/minia .
